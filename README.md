@@ -1,61 +1,72 @@
 # Docker Swarm Example
 
-* Install Docker Machine on 3 VM,
-   * curl -L https://github.com/docker/machine/releases/download/v0.13.0/docker-machine-`uname -s`-`uname -m` >/tmp/docker-machine &&
-     chmod +x /tmp/docker-machine &&
-     sudo cp /tmp/docker-machine /usr/local/bin/docker-machine
+## Without machine
+**Pre-requirements:** Create 3 Linux Machines that have Docker Engine running on them.
+* Execute on Master Node.
+   * `docker swarm init --advertise-addr <host ip>`
+      * To create Secondary Master, run command on master to get master token
+      * `docker swarm join-token manager`
+   * Open the following ports
+      * TCP port 2377 for cluster management communications
+      * TCP and UDP port 7946 for communication among nodes
+      * UDP port 4789 for overlay network traffic
 
-* Install Virtualbox for Docker-Machine Driver
-   * sudo apt install virtualbox
-* `docker-machine ls` to list available machines.
-* `docker-machine create --driver virtualbox manager1` to create virtual machine
-* `docker-machine ip manager1` to get ip address of docker machine
 
-##Open protocols and ports between the hosts
-The following ports must be available. On some systems, these ports are open by default.
+* Execute on Worker Nodes
+   * `docker swarm join --token <token> <host ip>:2377`
+   * Open the following ports
+      * TCP port 2377 for cluster management communications
+      * TCP and UDP port 7946 for communication among nodes
+      * UDP port 4789 for overlay network traffic
 
-* TCP port 2377 for cluster management communications
-* TCP and UDP port 7946 for communication among nodes
-* UDP port 4789 for overlay network traffic
-* If you are planning on creating an overlay network with encryption (--opt encrypted), you will also need to ensure ip protocol 50 (ESP) traffic is allowed.
 
-* https://docs.docker.com/engine/swarm/swarm-tutorial/create-swarm/
-* https://docs.docker.com/engine/swarm/swarm-tutorial/add-nodes/
-* https://docs.docker.com/engine/swarm/swarm-tutorial/deploy-service/
-* https://docs.docker.com/engine/swarm/swarm-tutorial/inspect-service/  
-
-# Begin the Swarm
-Open a terminal and ssh into the machine where you want to run your manager node. This tutorial uses a machine named manager1. If you use Docker Machine, you can connect to it via SSH using the following command:
+* For Portainer Management GUI Run the Following on Master Nodes
 ```
-$ docker-machine ssh manager1
+docker volume create portainer_data
+docker run -d -p 9000:9000 -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer
+```
+* Running Portainer in the Swarm:
+```
+docker service create \
+--name portainer \
+--publish 9000:9000 \
+--replicas=1 \
+--constraint 'node.role == manager' \
+--mount type=bind,src=//var/run/docker.sock,dst=/var/run/docker.sock \
+portainer/portainer \
+-H unix:///var/run/docker.sock
+```
+* Access Manager `http://<host ip>:9000/`
+
+* If you prefer to just use the Docker Visualizer you would run this in the swarm.
+```
+docker service create \
+  --name=viz \
+  --publish=8080:8080/tcp \
+  --constraint=node.role==manager \
+  --mount=type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
+  dockersamples/visualizer
 ```
 
-Run the following command to create a new swarm:
-```
-docker swarm init --advertise-addr <MANAGER-IP>
-```
-In the tutorial, the following command creates a swarm on the manager1 machine:
+## Using Docker Machine
 
+* Run `setup.sh`
+* Run `install-swarm-vb-driver.sh`
+* List Docker Machine `docker-machine ls`
 ```
-$ docker swarm init --advertise-addr 192.168.99.100
+NAME            ACTIVE   DRIVER       STATE     URL                         SWARM   DOCKER        ERRORS
+swarm-master    -        virtualbox   Running   tcp://192.168.99.100:2376           v17.10.0-ce   
+swarm-node-01   -        virtualbox   Running   tcp://192.168.99.101:2376           v17.10.0-ce   
+swarm-node-02   -        virtualbox   Running   tcp://192.168.99.102:2376           v17.10.0-ce  
 ```
-Swarm initialized: current node (dxn1zf6l61qsb1josjja83ngz) is now a manager.
+* To get IP from running Docker Machine `docker-machine ip <name>`
+* Next Shell into each Docker Machine and complete the Without Machine Steps
+   * `docker-machine ssh <name>`
 
-To add a worker to this swarm, run the following command:
-```
-    docker swarm join \
-    --token SWMTKN-1-49nj1cmql0jkz5s954yi3oex3nedyz0fb0xx14ie39trti4wxv-8vxv8rssmk743ojnwacrr2e7c \
-    192.168.99.100:2377
-```
+## Useful Commands
 
-To add a manager to this swarm, run `docker swarm join-token manager` and follow the instructions.
-The --advertise-addr flag configures the manager node to publish its address as 192.168.99.100. The other nodes in the swarm must be able to access the manager at the IP address.
-
-The output includes the commands to join new nodes to the swarm. Nodes will join as managers or workers depending on the value for the --token flag.
-
-Run docker info to view the current state of the swarm:
-```
-$ docker info
+* Run docker info to view the current state of the swarm:
+   * `docker info`
 ```
 Containers: 2
 Running: 0
@@ -68,13 +79,31 @@ Swarm: active
   Managers: 1
   Nodes: 1
   ...snip...
-
-Run the docker node ls command to view information about nodes:
 ```
-$ docker node ls
+
+* Run the docker node ls command to view information about nodes:
+   * `docker node ls`
+
 ```
 ID                           HOSTNAME  STATUS  AVAILABILITY  MANAGER STATUS
 dxn1zf6l61qsb1josjja83ngz *  manager1  Ready   Active        Leader
 
 The * next to the node ID indicates that you’re currently connected on this node.
+```
 
+* `docker-machine ls` - List Docker Machines
+* `docker-machine ip <machine name>` - Get IP address of Docker Machine
+* `docker-machine ssh <machinename>` - SSH into Docker Machine
+* `docker swarm init --advertise-addr <manager ip>` - Create Swarm
+* `docker info` - Get Current State of Swarm
+* `docker node ls` - List connected Nodes
+* `docker service create --replicas 1 --name <name> <container> <parameters>` * Creates a Swarm Service
+* `docker service create --name <SERVICE-NAME> --publish <PUBLISHED-PORT>:<TARGET-PORT> <IMAGE>` - create a Swarm Service mapped to port
+* `docker service ls` - List of running services
+* `docker service inspect --pretty <name>` - Gets details on a service "--pretty displays info in yaml, without is JSON"
+* `docker service ps <name>` - See which node is running service.
+* `docker ps` - Execute on working node to see details
+* `docker service scale <name>=<number of tasks>` - Scale a service across nodes.
+* `docker service rm <name>` - remove the service
+* `docker service update --image <imagename> <service-name>` - Update running service
+* `docker service update --publish-add <PUBLISHED-PORT>:<TARGET-PORT> <service-name>` - Update port on running service

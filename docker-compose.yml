@@ -1,0 +1,6 @@
+version: "3"
+services:
+  app1:
+    image: localhost:5000/example-app
+    ports:
+      - "8080:8080"

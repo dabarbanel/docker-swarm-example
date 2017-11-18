@@ -1,5 +1,15 @@
 # Docker Swarm Example
 
+## File Explanations
+* **setup.sh** - Installs docker-machine and virtualbox for single host testing
+* **install-swarm-no-machine.sh** - Opens TCP Ports on Ubuntu Machine
+* **install-swarm-vb-driver.sh** - Creates 3 docker machines using VB driver and copies into master node create-master-services.sh
+* **create-master-services.sh** - Loads Docker Registry and Portainer Services, then self destructs.
+* **add-example-service** - Adds example python image and load-example-service.sh into the master-node or specified machine NAME.
+* **load-example-service.sh** - Loads example service into Docker Registry Service and self destructs
+* **notes** - Research to possibly use later
+* **ubuntu-16.04-fix-vb.sh** - Used to fix Kernel problem when attempting to install virtualbox on Ubuntu 16.04
+
 ## Without machine
 **Pre-requirements:** Create 3 Linux Machines that have Docker Engine running on them.
 * Execute on Master Node.
@@ -36,7 +46,7 @@ docker service create \
 portainer/portainer \
 -H unix:///var/run/docker.sock
 ```
-* Access Manager `http://<host ip>:9000/`
+* Access Manager `http://<Master Node Ip>:9000/`
 
 * If you prefer to just use the Docker Visualizer you would run this in the swarm.
 ```
@@ -62,6 +72,9 @@ swarm-node-02   -        virtualbox   Running   tcp://192.168.99.102:2376       
 * To get IP from running Docker Machine `docker-machine ip <name>`
 * Next Shell into each Docker Machine and complete the Without Machine Steps
    * `docker-machine ssh <name>`
+
+## Create Docker Registry in SWARM
+* `docker service create --name registry --publish 5000:5000 registry:2`
 
 ## Useful Commands
 
@@ -94,6 +107,7 @@ The * next to the node ID indicates that you’re currently connected on this no
 * `docker-machine ls` - List Docker Machines
 * `docker-machine ip <machine name>` - Get IP address of Docker Machine
 * `docker-machine ssh <machinename>` - SSH into Docker Machine
+* `docker-machine scp -r <localFile> <machinename>:<pathToRemoteFile>` - Copy file into Docker Machine
 * `docker swarm init --advertise-addr <manager ip>` - Create Swarm
 * `docker info` - Get Current State of Swarm
 * `docker node ls` - List connected Nodes

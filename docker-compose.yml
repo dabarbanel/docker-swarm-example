@@ -1,6 +1,10 @@
-version: "3"
+version: '3'
+
 services:
-  app1:
-    image: localhost:5000/example-app
+  web:
+    image: localhost:5000/example-service
+    #build: .
     ports:
-      - "8080:8080"
+      - "8000:8000"
+  redis:
+    image: redis:alpine

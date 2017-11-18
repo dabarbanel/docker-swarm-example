@@ -1,50 +1,13 @@
-import json
-from time import sleep
-
-import requests
 from flask import Flask
+from redis import Redis
+
 app = Flask(__name__)
-
-BASE_CONSUL_URL = 'http://consul1:8500'
-
-PORT = 8080
+redis = Redis(host='redis', port=6379)
 
 @app.route('/')
-def home():
-    return 'Hello World!'
+def hello():
+    count = redis.incr('hits')
+    return 'Hello World! I have been seen {} times.\n'.format(count)
 
-
-@app.route('/health')
-def hello_world():
-    data = {
-        'status': 'healthy'
-    }
-    return json.dumps(data)
-
-
-def register():
-    url = BASE_CONSUL_URL + '/v1/agent/service/register'
-    data = {
-        'name': 'PythonApp',
-        'address': 'app1',
-        'check': {
-            'http': 'http://app1:{port}/health'.format(port=PORT),
-            'interval': '10s'
-        }
-    }
-    res = requests.put(
-        url,
-        data=json.dumps(data)
-    )
-    return res.text
-
-
-if __name__ == '__main__':
-    sleep(8)
-    try:
-        print(register())
-    except:
-        pass
-    app.debug = True
-    app.run(host="0.0.0.0", port=PORT)
-
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000, debug=True)

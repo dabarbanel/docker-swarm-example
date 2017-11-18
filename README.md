@@ -3,50 +3,36 @@
 ## File Explanations
 * **setup.sh** - Installs docker-machine and virtualbox for single host testing
 * **install-swarm-no-machine.sh** - Opens TCP Ports on Ubuntu Machine
-* **install-swarm-vb-driver.sh** - Creates 3 docker machines using VB driver and copies into master node create-master-services.sh
+* **install-swarm-vb-driver.sh** - (For Use with Virtualbox Driver) - Creates 3 docker machines using VB driver and copies into master node create-master-services.sh
 * **create-master-services.sh** - Loads Docker Registry and Portainer Services, then self destructs.
-* **add-example-service** - Adds example python image and load-example-service.sh into the master-node or specified machine NAME.
-* **load-example-service.sh** - Loads example service into Docker Registry Service and self destructs
+* **add-example-service** - (For Use with Virtualbox Driver) - Adds example python image and load-example-service.sh into the master-node or specified machine NAME.
+* **load-example-service.sh** - (For Use with Virtualbox Driver) - Loads example service into Docker Registry Service and self destructs
 * **notes** - Research to possibly use later
 * **ubuntu-16.04-fix-vb.sh** - Used to fix Kernel problem when attempting to install virtualbox on Ubuntu 16.04
 
 ## Without machine
 **Pre-requirements:** Create 3 Linux Machines that have Docker Engine running on them.
 * Execute on Master Node.
-   * `docker swarm init --advertise-addr <host ip>`
+   * `docker swarm init --advertise-addr <master node ip>`
       * To create Secondary Master, run command on master to get master token
       * `docker swarm join-token manager`
-   * Open the following ports
-      * TCP port 2377 for cluster management communications
-      * TCP and UDP port 7946 for communication among nodes
-      * UDP port 4789 for overlay network traffic
+   * `install-swarm-no-machine.sh` on ubuntu Machines, it opens ports below
+      * Open the following ports
+         * TCP port 2377 for cluster management communications
+         * TCP and UDP port 7946 for communication among nodes
+         * UDP port 4789 for overlay network traffic
 
 
 * Execute on Worker Nodes
-   * `docker swarm join --token <token> <host ip>:2377`
-   * Open the following ports
-      * TCP port 2377 for cluster management communications
-      * TCP and UDP port 7946 for communication among nodes
-      * UDP port 4789 for overlay network traffic
+   * `docker swarm join --token <token> <master node ip>:2377`
+   * `install-swarm-no-machine.sh` on ubuntu Machines, it opens ports below
+      * Open the following ports
+         * TCP port 2377 for cluster management communications
+         * TCP and UDP port 7946 for communication among nodes
+         * UDP port 4789 for overlay network traffic
 
-
-* For Portainer Management GUI Run the Following on Master Nodes
-```
-docker volume create portainer_data
-docker run -d -p 9000:9000 -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer
-```
-* Running Portainer in the Swarm:
-```
-docker service create \
---name portainer \
---publish 9000:9000 \
---replicas=1 \
---constraint 'node.role == manager' \
---mount type=bind,src=//var/run/docker.sock,dst=/var/run/docker.sock \
-portainer/portainer \
--H unix:///var/run/docker.sock
-```
-* Access Manager `http://<Master Node Ip>:9000/`
+* `add-example-service.sh` to create Docker Registry and Run Portainer services
+* Access UI Manager `http://<Master Node Ip>:9000/`
 
 * If you prefer to just use the Docker Visualizer you would run this in the swarm.
 ```
